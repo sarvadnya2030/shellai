@@ -61,12 +61,18 @@ class OllamaClient:
         except Exception:
             return []
 
-    def generate(self, prompt: str, stream: bool = False) -> str:
-        """Generate a response from the model."""
+    def generate(self, prompt: str, stream: bool = False, think: bool = False) -> str:
+        """Generate a response from the model.
+
+        think=False disables chain-of-thought for qwen3/qwen3.5 thinking models,
+        giving direct answers instead of putting everything in the <think> block.
+        Use think=True only for the explain prompt where reasoning is helpful.
+        """
         payload = {
             "model": self.model,
             "prompt": prompt,
             "stream": stream,
+            "think": think,
             "options": {
                 "temperature": 0.1,   # Low temp for deterministic commands
                 "num_predict": 256,
@@ -77,7 +83,8 @@ class OllamaClient:
             return self._stream_generate(payload)
 
         response = self._post("/api/generate", payload)
-        return response.get("response", "").strip()
+        # Fallback: some model versions put output in thinking when think=True
+        return (response.get("response") or response.get("thinking", "")).strip()
 
     def _stream_generate(self, payload: dict) -> str:
         """Stream tokens and return the full response."""
