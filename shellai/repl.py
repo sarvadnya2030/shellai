@@ -78,7 +78,7 @@ class ShellAIRepl:
     def __init__(self, config: Config) -> None:
         self.config = config
         self.client = OllamaClient(config)
-        self.router = ModelRouter(config.model_fast, config.model_strong)
+        self.router = ModelRouter(config.model_tiny, config.model_fast, config.model_strong)
         self.cache = CommandCache(CONFIG_DIR / "cache.json", ttl_seconds=config.cache_ttl)
         self._session: list[tuple[str, str]] = []   # (request, command)
         self._last_request: Optional[str] = None

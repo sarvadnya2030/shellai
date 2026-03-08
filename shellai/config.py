@@ -13,10 +13,11 @@ DEFAULTS: dict = {
     # Ollama
     "ollama_url": "http://localhost:11434",
     # Model tiers — routed automatically by complexity score
-    "model_fast": "qwen3.5:2b",     # low-latency, simple requests
-    "model_strong": "qwen3.5:4b",   # higher accuracy, complex requests
+    "model_tiny": "qwen3.5:0.8b",   # ultra-fast, trivial single-step queries
+    "model_fast": "qwen3.5:2b",     # standard queries
+    "model_strong": "qwen3.5:4b",   # complex / multi-step queries
     # Legacy single-model field kept for --model flag compatibility
-    "model": "qwen3.5:2b",
+    "model": "qwen3.5:0.8b",
     # Timeouts & retries
     "timeout": 120,
     "max_retries": 2,
@@ -39,6 +40,7 @@ DEFAULTS: dict = {
 @dataclass
 class Config:
     ollama_url: str = DEFAULTS["ollama_url"]
+    model_tiny: str = DEFAULTS["model_tiny"]
     model_fast: str = DEFAULTS["model_fast"]
     model_strong: str = DEFAULTS["model_strong"]
     model: str = DEFAULTS["model"]           # overridden by --model flag

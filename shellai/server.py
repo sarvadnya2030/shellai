@@ -187,6 +187,7 @@ class _Handler(BaseHTTPRequestHandler):
                 "status": "ok" if available else "degraded",
                 "ollama_reachable": available,
                 "ollama_url": self._config.ollama_url,
+                "model_tiny": self._config.model_tiny,
                 "model_fast": self._config.model_fast,
                 "model_strong": self._config.model_strong,
                 "available_models": models,
@@ -236,7 +237,7 @@ class ShellAIServer:
 
     def serve(self) -> None:
         client = OllamaClient(self.config)
-        router = ModelRouter(self.config.model_fast, self.config.model_strong)
+        router = ModelRouter(self.config.model_tiny, self.config.model_fast, self.config.model_strong)
         cache = CommandCache(CONFIG_DIR / "cache.json", ttl_seconds=self.config.cache_ttl)
 
         # Inject dependencies at the class level (required by BaseHTTPRequestHandler)

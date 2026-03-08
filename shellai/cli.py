@@ -46,7 +46,7 @@ from .utils import clean_llm_command, looks_like_command
 
 def cmd_generate(request: str, client: OllamaClient, config: Config, args) -> None:
     """NL → model router → safety check → confirm → execute."""
-    router = ModelRouter(config.model_fast, config.model_strong)
+    router = ModelRouter(config.model_tiny, config.model_fast, config.model_strong)
     cache = CommandCache(CONFIG_DIR / "cache.json", ttl_seconds=config.cache_ttl)
 
     print_step(f"Request: {C.WHITE}{request}{C.RESET}")
@@ -189,12 +189,15 @@ def cmd_models(client: OllamaClient, config: Config) -> None:
         return
     print(f"\n{C.CYAN}{C.BOLD}Available models:{C.RESET}\n")
     for m in models:
+        tiny = m == config.model_tiny
         fast = m == config.model_fast
         strong = m == config.model_strong
-        tag = f" {C.GREEN}[fast]{C.RESET}" if fast else (f" {C.YELLOW}[strong]{C.RESET}" if strong else "")
-        marker = f"  {C.GREEN}●{C.RESET} " if (fast or strong) else "    "
+        tag = (f" {C.CYAN}[tiny]{C.RESET}" if tiny else
+               f" {C.GREEN}[fast]{C.RESET}" if fast else
+               f" {C.YELLOW}[strong]{C.RESET}" if strong else "")
+        marker = f"  {C.GREEN}●{C.RESET} " if (tiny or fast or strong) else "    "
         print(f"{marker}{m}{tag}")
-    print(f"\n{C.DIM}fast={config.model_fast}  strong={config.model_strong}{C.RESET}\n")
+    print(f"\n{C.DIM}tiny={config.model_tiny}  fast={config.model_fast}  strong={config.model_strong}{C.RESET}\n")
 
 
 def cmd_config_show(config: Config) -> None:
@@ -330,7 +333,7 @@ def main() -> None:
     config = Config.load()
 
     if args.model:
-        config.model = config.model_fast = config.model_strong = args.model
+        config.model = config.model_tiny = config.model_fast = config.model_strong = args.model
     if args.url:
         config.ollama_url = args.url
     if args.no_confirm:

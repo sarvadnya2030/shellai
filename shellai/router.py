@@ -1,20 +1,19 @@
 """Intelligent model router for ShellAI.
 
-Routes each request to the appropriate Qwen model tier based on an estimated
-complexity score derived from heuristic text analysis.
+3-tier routing based on a lightweight complexity score (no ML inference):
 
-  Simple / unambiguous → fast model  (qwen2.5:3b  — low latency)
-  Complex / multi-step  → strong model (qwen2.5:7b — higher accuracy)
+  score < 0.15  → tiny   (qwen3.5:0.8b — ultra-fast, trivial queries)
+  score < 0.35  → fast   (qwen3.5:2b   — standard queries)
+  score >= 0.35 → strong (qwen3.5:4b   — complex / multi-step queries)
 
-The score is intentionally lightweight (no ML inference) so routing itself
-adds zero latency.
+Routing itself adds zero latency.
 """
 
 import re
 from dataclasses import dataclass
 from typing import Literal
 
-ModelTier = Literal["fast", "strong"]
+ModelTier = Literal["tiny", "fast", "strong"]
 
 # Tokens that suggest a multi-step or structurally complex operation
 _COMPLEX_TOKENS = {
@@ -82,26 +81,44 @@ def _score(request: str) -> float:
 
 
 class ModelRouter:
-    """Routes requests to the appropriate model based on complexity scoring."""
+    """Routes requests across three model tiers based on complexity scoring.
 
-    THRESHOLD = 0.35  # score >= threshold → strong model
+    Tier selection:
+      tiny   — short queries (≤ 4 words) with no complex indicators
+      fast   — standard queries (complexity score < 0.35)
+      strong — complex / multi-step queries (complexity score ≥ 0.35)
+    """
 
-    def __init__(self, fast_model: str, strong_model: str) -> None:
+    TINY_MAX_WORDS = 4      # requests this short go to tiny (if score == 0)
+    FAST_THRESHOLD = 0.35   # score < this → fast, else → strong
+
+    def __init__(self, tiny_model: str, fast_model: str, strong_model: str) -> None:
+        self.tiny_model = tiny_model
         self.fast_model = fast_model
         self.strong_model = strong_model
 
     def route(self, request: str) -> RoutingDecision:
         score = _score(request)
-        if score >= self.THRESHOLD:
+        word_count = len(request.split())
+
+        # Short, unambiguous queries → tiny
+        if score == 0.0 and word_count <= self.TINY_MAX_WORDS:
             return RoutingDecision(
-                tier="strong",
-                model=self.strong_model,
+                tier="tiny",
+                model=self.tiny_model,
+                score=0.0,
+                reason=f"trivial: {word_count} words, score=0",
+            )
+        if score < self.FAST_THRESHOLD:
+            return RoutingDecision(
+                tier="fast",
+                model=self.fast_model,
                 score=round(score, 3),
-                reason=f"complexity {score:.2f} ≥ threshold {self.THRESHOLD}",
+                reason=f"complexity {score:.2f} < {self.FAST_THRESHOLD}",
             )
         return RoutingDecision(
-            tier="fast",
-            model=self.fast_model,
+            tier="strong",
+            model=self.strong_model,
             score=round(score, 3),
-            reason=f"complexity {score:.2f} < threshold {self.THRESHOLD}",
+            reason=f"complexity {score:.2f} ≥ {self.FAST_THRESHOLD}",
         )

@@ -33,7 +33,7 @@ def server_port(tmp_path_factory):
     mock_client.list_models.return_value = ["qwen2.5:3b", "qwen2.5:7b"]
     mock_client.generate.return_value = "ps aux"
 
-    router = ModelRouter("qwen2.5:3b", "qwen2.5:7b")
+    router = ModelRouter("qwen3.5:0.8b", "qwen3.5:2b", "qwen3.5:4b")
     cache = CommandCache(tmp / "cache.json")
 
     _Handler._config = config
@@ -92,6 +92,7 @@ class TestHealthEndpoint:
 
     def test_contains_model_info(self, server_port):
         _, body = _get(server_port, "/api/health")
+        assert "model_tiny" in body
         assert "model_fast" in body
         assert "model_strong" in body
 

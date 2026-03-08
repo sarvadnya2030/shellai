@@ -4,16 +4,20 @@ import pytest
 from shellai.router import ModelRouter, _score
 
 
-FAST = "qwen2.5:3b"
-STRONG = "qwen2.5:4b"
+TINY = "qwen3.5:0.8b"
+FAST = "qwen3.5:2b"
+STRONG = "qwen3.5:4b"
 
 
 @pytest.fixture
 def router() -> ModelRouter:
-    return ModelRouter(fast_model=FAST, strong_model=STRONG)
+    return ModelRouter(tiny_model=TINY, fast_model=FAST, strong_model=STRONG)
 
 
 class TestComplexityScore:
+    def test_trivial_short_request_has_zero_score(self):
+        assert _score("show uptime") == 0.0
+
     def test_simple_list_request_is_low(self):
         assert _score("list running processes") < 0.35
 
@@ -39,8 +43,15 @@ class TestComplexityScore:
 
 
 class TestModelRouting:
-    def test_simple_request_routes_to_fast(self, router):
-        decision = router.route("show running processes")
+    def test_short_trivial_request_routes_to_tiny(self, router):
+        # ≤ 4 words, score == 0 → tiny
+        decision = router.route("show uptime")
+        assert decision.tier == "tiny"
+        assert decision.model == TINY
+
+    def test_longer_simple_request_routes_to_fast(self, router):
+        # > 4 words but score < 0.35 → fast
+        decision = router.route("list all running processes with their PIDs")
         assert decision.tier == "fast"
         assert decision.model == FAST
 
@@ -54,9 +65,10 @@ class TestModelRouting:
         assert 0.0 <= decision.score <= 1.0
         assert len(decision.reason) > 0
 
-    def test_empty_request_routes_to_fast(self, router):
+    def test_empty_request_routes_to_tiny(self, router):
+        # 0 words, score 0 → tiny
         decision = router.route("")
-        assert decision.tier == "fast"
+        assert decision.tier == "tiny"
 
     def test_routing_is_deterministic(self, router):
         req = "find all python files and count lines"
