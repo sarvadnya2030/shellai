@@ -122,3 +122,21 @@ class OllamaClient:
         }
         response = self._post("/api/chat", payload)
         return response.get("message", {}).get("content", "").strip()
+
+    def chat_with_tools(self, messages: list[dict], tools: list[dict]) -> dict:
+        """Call /api/chat with tool definitions for agentic tool use.
+
+        Returns the full assistant message dict which may contain:
+          - 'content': text response (when done)
+          - 'tool_calls': list of tool calls the model wants to make
+        """
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "tools": tools,
+            "stream": False,
+            "think": False,
+            "options": {"temperature": 0.1, "num_predict": 1024},
+        }
+        response = self._post("/api/chat", payload)
+        return response.get("message", {})

@@ -321,6 +321,10 @@ def main() -> None:
     parser.add_argument("--version", "-v", action="version", version=f"shellai {__version__}")
     parser.add_argument("--url", metavar="URL")
     parser.add_argument("--no-confirm", action="store_true")
+    parser.add_argument("--agentic", "-a", action="store_true",
+                        help="Decompose request into a multi-step plan and execute sequentially")
+    parser.add_argument("--yes", "-y", action="store_true",
+                        help="Auto-confirm all prompts (use with care)")
     # serve flags
     parser.add_argument("--port", type=int, metavar="N", help="Port for `ai serve`")
     parser.add_argument("--host", metavar="HOST", help="Host for `ai serve`")
@@ -401,6 +405,12 @@ def main() -> None:
 
     if args.explain and looks_like_command(request):
         cmd_explain(args.request, client, config)
+        return
+
+    # Agentic mode: explicit flag or auto-detected multi-step intent
+    from .agent import ShellAIAgent, detect_agentic
+    if args.agentic or detect_agentic(request):
+        ShellAIAgent(config).run(request, auto_confirm=args.yes)
         return
 
     cmd_generate(request, client, config, args)

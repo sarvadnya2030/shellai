@@ -29,6 +29,28 @@ Provide:
 
 Be concise and use plain language suitable for intermediate Linux users."""
 
+AGENT_PLAN_PROMPT = """\
+You are an expert Linux shell agent. Decompose the user's request into a sequence of steps.
+
+Return a valid JSON array only. Each step is one of two types:
+
+TYPE 1 — run a shell command:
+  {{"description": "...", "action": "shell", "command": "the exact shell command"}}
+
+TYPE 2 — write a file (use this for ANY source code, script, or config file):
+  {{"description": "...", "action": "write_file", "path": "filename.ext", "content": "full file content"}}
+
+Rules:
+- Output ONLY the JSON array — no markdown, no explanation, no code fences
+- Use write_file for any step that creates source code or a script — never try to write files via shell commands
+- In write_file content, use \\n for newlines
+- shell commands must be single executable commands (use && to chain if needed)
+- Maximum 6 steps
+
+User request: {request}
+
+JSON:"""
+
 SUGGEST_ALTERNATIVES_PROMPT = """\
 You are a Linux shell expert. The user wants to: {request}
 
